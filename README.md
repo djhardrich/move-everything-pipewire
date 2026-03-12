@@ -69,7 +69,21 @@ guitarix --jack
 
 ## Desktop Mode (VNC)
 
-The desktop rootfs includes XFCE and a VNC server, giving you a full Linux desktop on the Move accessible from any VNC client.
+The desktop rootfs includes XFCE and a VNC server, giving you a full Linux desktop on the Move accessible from any VNC client. Run graphical audio apps like Renoise, Guitarix, or Audacity — audio routes through PipeWire to Move's speakers.
+
+### Quick Start
+
+1. Build and deploy the desktop rootfs (see [Build](#build) and [Install](#install))
+2. Open Move Everything on Move and load **PipeWire** as a sound generator in a shadow chain slot
+3. SSH into Move and start VNC:
+
+```bash
+ssh root@move.local
+sh /data/UserData/start-vnc.sh
+```
+
+4. Connect a VNC client to `move.local:5901` (password: `everything`)
+5. Open apps from the XFCE desktop — audio just works via PipeWire
 
 ### Building the Desktop Image
 
@@ -81,14 +95,17 @@ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 ./scripts/build-rootfs.sh --desktop
 ```
 
-This creates a Debian sid arm64 rootfs with:
+This creates a Debian sid arm64 rootfs (~500MB) with:
 - XFCE4 desktop environment
 - TigerVNC server
-- PipeWire + ALSA + JACK
+- PipeWire + PulseAudio + ALSA + JACK (all routed to Move audio out)
+- Falkon web browser
 - User `move` with password `everything` (has passwordless sudo)
 - pavucontrol, mpg321, alsa-utils, curl, nano
 
 ### Starting the VNC Server
+
+The PipeWire sound generator must be loaded first — it creates the audio bridge FIFO that PipeWire writes to.
 
 ```bash
 ssh root@move.local
@@ -113,6 +130,16 @@ Most VNC clients (RealVNC, TigerVNC viewer, macOS Screen Sharing) also support d
 ```bash
 ssh root@move.local
 sh /data/UserData/start-vnc.sh stop
+```
+
+### JACK Apps (Renoise, etc.)
+
+Some JACK apps need the PipeWire JACK library override to connect:
+
+```bash
+chroot /data/UserData/pw-chroot su - move
+sudo cp /usr/share/doc/pipewire/examples/ld.so.conf.d/pipewire-jack-*.conf /etc/ld.so.conf.d/
+sudo ldconfig
 ```
 
 ### Mounting the Chroot Manually

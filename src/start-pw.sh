@@ -61,7 +61,7 @@ chmod 666 "$FIFO_PLAYBACK" 2>/dev/null
 
 # Launch everything in a single backgrounded subshell so we return immediately
 (
-    # Start dbus session bus
+    # Start dbus (needed so PipeWire's RT module queries RTKit and accepts rt.prio=0)
     chroot "$CHROOT" sh -c "
         export XDG_RUNTIME_DIR=$RUNTIME_DIR
         if ! pgrep -x dbus-daemon >/dev/null 2>&1; then
@@ -70,6 +70,10 @@ chmod 666 "$FIFO_PLAYBACK" 2>/dev/null
             dbus-daemon --session --fork --address=unix:path=${RUNTIME_DIR}/dbus-pw 2>/dev/null || true
         fi
     "
+
+    # Wait for dbus socket to be ready (without this, PipeWire falls back to
+    # rlimits and gets SCHED_FIFO priority 1, competing with Move's audio engine)
+    sleep 1
 
     # Start PipeWire as move user (uid 1000) so VNC desktop apps can connect
     chroot "$CHROOT" su - move -c "

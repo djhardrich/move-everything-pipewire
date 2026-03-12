@@ -54,12 +54,6 @@ function tick() {
 }
 
 function onMidiMessageInternal(status_byte, data1, data2) {
-    /* Knob 1 (CC 71): gain control */
-    if ((status_byte & 0xF0) === 0xB0 && data1 === 71) {
-        gain = data2 / 63.5;  /* 0-127 → 0.0-2.0 */
-        set_param("gain", gain.toFixed(2));
-    }
-
     /* Pad 1 press: restart PipeWire */
     if ((status_byte & 0xF0) === 0x90 && data1 === 36 && data2 > 0) {
         set_param("restart", "1");

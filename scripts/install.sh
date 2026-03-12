@@ -94,6 +94,27 @@ export DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/pw-runtime-1/dbus-pw
 PROFEOF
 chmod 644 $REMOTE_CHROOT/etc/profile.d/pipewire.sh"
 
+# ── Disable PipeWire RT scheduling (prevents SIGKILL from kernel RT throttling) ──
+echo ""
+echo "--- Installing PipeWire no-RT config ---"
+ssh "root@$DEVICE_HOST" "mkdir -p $REMOTE_CHROOT/etc/pipewire/pipewire.conf.d && cat > $REMOTE_CHROOT/etc/pipewire/pipewire.conf.d/no-rt.conf << 'RTEOF'
+context.modules = [
+    { name = libpipewire-module-rt
+      args = {
+          nice.level = 0
+          rt.prio = 0
+          rt.time.soft = -1
+          rt.time.hard = -1
+      }
+      flags = [ ifexists nofail ]
+    }
+]
+RTEOF
+chmod 644 $REMOTE_CHROOT/etc/pipewire/pipewire.conf.d/no-rt.conf
+mkdir -p $REMOTE_CHROOT/etc/wireplumber/wireplumber.conf.d
+cp $REMOTE_CHROOT/etc/pipewire/pipewire.conf.d/no-rt.conf $REMOTE_CHROOT/etc/wireplumber/wireplumber.conf.d/no-rt.conf
+echo '# Disabled - RT scheduling conflicts with Move audio engine' > $REMOTE_CHROOT/etc/security/limits.d/25-pw-rlimits.conf"
+
 echo ""
 echo "=== Install Complete ==="
 echo "Module: $REMOTE_MODULE"
