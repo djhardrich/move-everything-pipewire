@@ -26,19 +26,6 @@ ssh "root@$DEVICE_HOST" "mkdir -p $REMOTE_MODULE"
 scp -r "$DIST_DIR/"* "root@$DEVICE_HOST:$REMOTE_MODULE/"
 ssh "root@$DEVICE_HOST" "chmod +x $REMOTE_MODULE/start-pw.sh $REMOTE_MODULE/stop-pw.sh && chown -R ableton:users $REMOTE_MODULE"
 
-# ── Install pipewire-midi module ──
-MIDI_MODULE_ID="pipewire-midi"
-MIDI_DIST_DIR="$REPO_ROOT/dist/$MIDI_MODULE_ID"
-REMOTE_MIDI_MODULE="/data/UserData/move-anything/modules/sound_generators/$MIDI_MODULE_ID"
-
-if [ -d "$MIDI_DIST_DIR" ]; then
-    echo ""
-    echo "--- Deploying pipewire-midi module to $REMOTE_MIDI_MODULE ---"
-    ssh "root@$DEVICE_HOST" "mkdir -p $REMOTE_MIDI_MODULE"
-    scp -r "$MIDI_DIST_DIR/"* "root@$DEVICE_HOST:$REMOTE_MIDI_MODULE/"
-    ssh "root@$DEVICE_HOST" "chmod +x $REMOTE_MIDI_MODULE/start-pw.sh $REMOTE_MIDI_MODULE/stop-pw.sh && chown -R ableton:users $REMOTE_MIDI_MODULE"
-fi
-
 # ── Install pw-helper (setuid root helper for chroot management) ──
 PW_HELPER="$REPO_ROOT/build/pw-helper"
 if [ -f "$PW_HELPER" ]; then
@@ -48,16 +35,6 @@ if [ -f "$PW_HELPER" ]; then
     scp "$PW_HELPER" "root@$DEVICE_HOST:/data/UserData/move-anything/bin/pw-helper"
     ssh "root@$DEVICE_HOST" "chown root:root /data/UserData/move-anything/bin/pw-helper && chmod 4755 /data/UserData/move-anything/bin/pw-helper"
     echo "pw-helper installed at /data/UserData/move-anything/bin/pw-helper"
-fi
-
-# ── Install pw-helper-midi ──
-PW_HELPER_MIDI="$REPO_ROOT/build/pw-helper-midi"
-if [ -f "$PW_HELPER_MIDI" ]; then
-    echo ""
-    echo "--- Installing pw-helper-midi (setuid root) ---"
-    scp "$PW_HELPER_MIDI" "root@$DEVICE_HOST:/data/UserData/move-anything/bin/pw-helper-midi"
-    ssh "root@$DEVICE_HOST" "chown root:root /data/UserData/move-anything/bin/pw-helper-midi && chmod 4755 /data/UserData/move-anything/bin/pw-helper-midi"
-    echo "pw-helper-midi installed at /data/UserData/move-anything/bin/pw-helper-midi"
 fi
 
 # ── Install jack-physical-shim to chroot ──
@@ -181,12 +158,11 @@ echo "  ssh root@$DEVICE_HOST"
 echo "  chroot $REMOTE_CHROOT bash -l"
 echo "  mpg321 -s song.mp3 | aplay -f S16_LE -r 44100 -c 2 -D pipewire"
 echo ""
+echo "MIDI:"
+echo "  JACK MIDI ports 'Move MIDI In' and 'Move MIDI Out' appear in chroot."
+echo "  Example: pw-jack fluidsynth --midi-driver=jack --audio-driver=jack -r 48000 /usr/share/sounds/sf2/FluidR3_GM.sf2"
+echo ""
 echo "Desktop (if installed):"
 echo "  ssh root@$DEVICE_HOST"
 echo "  sh /data/UserData/start-vnc.sh"
 echo "  # Connect VNC client to move.local:5901 (password: everything)"
-echo ""
-echo "PipeWire + MIDI:"
-echo "  Load 'PipeWire + MIDI' as a sound generator in Move Everything."
-echo "  JACK MIDI ports 'Move MIDI In' and 'Move MIDI Out' appear in chroot."
-echo "  Example: pw-jack fluidsynth --midi-driver=jack --audio-driver=jack -r 48000 /usr/share/sounds/sf2/FluidR3_GM.sf2"

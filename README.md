@@ -1,10 +1,8 @@
 # move-everything-pipewire
 
-A [Move Everything](https://github.com/charlesvestal/move-anything) sound generator module that bridges PipeWire audio and MIDI to the Ableton Move. Run any ALSA, JACK, or PipeWire app inside a Debian chroot and hear it through Move's speakers — with full bidirectional MIDI.
+A [Move Everything](https://github.com/charlesvestal/move-everything) sound generator module that bridges PipeWire audio and MIDI to the Ableton Move. Run any ALSA, JACK, or PipeWire app inside a Debian chroot and hear it through Move's speakers — with full bidirectional MIDI.
 
-Two modules are provided:
-- **PipeWire** — audio bridge only
-- **PipeWire + MIDI** — audio bridge with bidirectional MIDI between Move and the chroot
+- **PipeWire** — audio bridge with bidirectional MIDI between Move and the chroot
 
 ## How It Works
 
@@ -34,7 +32,7 @@ MIDI is transported over FIFOs using a 2-byte little-endian length-prefixed fram
 - Docker (with BuildKit)
 - QEMU binfmt for arm64 emulation (rootfs build only)
 - SSH access to Move (`root@move.local` or IP)
-- [Move Everything](https://github.com/charlesvestal/move-anything) installed on Move
+- [Move Everything](https://github.com/charlesvestal/move-everything) installed on Move
 
 ## Build
 
@@ -90,7 +88,7 @@ guitarix --jack
 
 ### Audio + MIDI (PipeWire + MIDI module)
 
-1. Load **PipeWire + MIDI** as a sound generator in a Move Everything shadow chain slot
+1. Load **PipeWire** as a sound generator in a Move Everything shadow chain slot
 2. PipeWire and the MIDI bridge start automatically
 3. SSH into Move and enter the chroot:
 

@@ -12,10 +12,14 @@ fi
 if [ -f "$PID_DIR/pipewire.pid" ]; then
     kill "$(cat "$PID_DIR/pipewire.pid")" 2>/dev/null || true
 fi
+if [ -f "$PID_DIR/midi-bridge.pid" ]; then
+    kill "$(cat "$PID_DIR/midi-bridge.pid")" 2>/dev/null || true
+fi
 
 # Fallback: kill by name inside chroot
 chroot "$CHROOT" killall wireplumber 2>/dev/null || true
 chroot "$CHROOT" killall pipewire 2>/dev/null || true
+chroot "$CHROOT" killall midi-bridge 2>/dev/null || true
 
 # Clean up PID files and runtime dir
 rm -rf "$PID_DIR"
@@ -23,6 +27,9 @@ rm -rf "$CHROOT/tmp/pw-runtime-${SLOT}"
 
 # Remove slot-specific PipeWire config
 rm -f "$CHROOT/etc/pipewire/pipewire.conf.d/move-bridge-${SLOT}.conf"
+
+# Clean up MIDI FIFOs
+rm -f "/tmp/midi-to-chroot-${SLOT}" "/tmp/midi-from-chroot-${SLOT}" 2>/dev/null
 
 # Unmount bind mounts (only if no other slots are using the chroot)
 # Check if any other pw-pids-* directories exist

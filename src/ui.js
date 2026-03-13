@@ -30,7 +30,7 @@ function tick() {
     clear();
 
     /* Header */
-    print(0, 0, "PipeWire Bridge");
+    print(0, 0, "PipeWire");
 
     /* Status line */
     var statusText = "";
