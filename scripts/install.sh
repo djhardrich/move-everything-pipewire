@@ -8,7 +8,7 @@ MODULE_ID="pipewire"
 DEVICE_HOST="${DEVICE_HOST:-move.local}"
 REMOTE_MODULE="/data/UserData/move-anything/modules/sound_generators/$MODULE_ID"
 REMOTE_CHROOT="/data/UserData/pw-chroot"
-DIST_DIR="$REPO_ROOT/dist/$MODULE_ID"
+MODULE_TAR="$REPO_ROOT/dist/pipewire-module.tar.gz"
 ROOTFS_TAR="$REPO_ROOT/dist/pw-chroot.tar.gz"
 ROOTFS_DESKTOP_TAR="$REPO_ROOT/dist/pw-chroot-desktop.tar.gz"
 
@@ -20,23 +20,23 @@ echo "Device: $DEVICE_HOST"
 echo ""
 
 # ── Install module files (ableton owns /data/UserData) ──
-if [ ! -d "$DIST_DIR" ]; then
-    echo "Error: $DIST_DIR not found. Run ./scripts/build.sh first."
+if [ ! -f "$MODULE_TAR" ]; then
+    echo "Error: $MODULE_TAR not found. Run ./scripts/build.sh first."
     exit 1
 fi
 
 echo "--- Deploying module to $REMOTE_MODULE ---"
 ssh "$USER_SSH" "mkdir -p $REMOTE_MODULE"
-scp -r "$DIST_DIR/"* "$USER_SSH:$REMOTE_MODULE/"
+scp "$MODULE_TAR" "$USER_SSH:/tmp/pipewire-module.tar.gz"
+ssh "$USER_SSH" "tar -xzf /tmp/pipewire-module.tar.gz -C $REMOTE_MODULE --strip-components=1 && rm /tmp/pipewire-module.tar.gz"
 ssh "$USER_SSH" "chmod +x $REMOTE_MODULE/start-pw.sh $REMOTE_MODULE/stop-pw.sh"
 
 # ── Install pw-helper (setuid root — requires root) ──
-PW_HELPER="$REPO_ROOT/build/pw-helper"
-if [ -f "$PW_HELPER" ]; then
+if ssh "$USER_SSH" "[ -f $REMOTE_MODULE/bin/pw-helper ]" 2>/dev/null; then
     echo ""
     echo "--- Installing pw-helper (setuid root) ---"
     ssh "$ROOT_SSH" "mkdir -p /data/UserData/move-anything/bin"
-    scp "$PW_HELPER" "$ROOT_SSH:/data/UserData/move-anything/bin/pw-helper"
+    ssh "$ROOT_SSH" "cp $REMOTE_MODULE/bin/pw-helper /data/UserData/move-anything/bin/pw-helper"
     ssh "$ROOT_SSH" "chown root:root /data/UserData/move-anything/bin/pw-helper && chmod 4755 /data/UserData/move-anything/bin/pw-helper"
     echo "pw-helper installed at /data/UserData/move-anything/bin/pw-helper"
 fi
@@ -78,34 +78,31 @@ else
 fi
 
 # ── Install files into chroot (root-owned paths) ──
-JACK_SHIM="$REPO_ROOT/build/jack-physical-shim.so"
-if [ -f "$JACK_SHIM" ]; then
+if ssh "$USER_SSH" "[ -f $REMOTE_MODULE/chroot-lib/jack-physical-shim.so ]" 2>/dev/null; then
     echo ""
     echo "--- Installing jack-physical-shim to chroot ---"
     ssh "$ROOT_SSH" "mkdir -p $REMOTE_CHROOT/usr/local/lib"
-    scp "$JACK_SHIM" "$ROOT_SSH:$REMOTE_CHROOT/usr/local/lib/jack-physical-shim.so"
+    ssh "$ROOT_SSH" "cp $REMOTE_MODULE/chroot-lib/jack-physical-shim.so $REMOTE_CHROOT/usr/local/lib/jack-physical-shim.so"
     ssh "$ROOT_SSH" "chmod 644 $REMOTE_CHROOT/usr/local/lib/jack-physical-shim.so"
     echo "jack-physical-shim installed at $REMOTE_CHROOT/usr/local/lib/jack-physical-shim.so"
 fi
 
-PW_JACK_PHYSICAL="$REPO_ROOT/src/pw-jack-physical"
-if [ -f "$PW_JACK_PHYSICAL" ]; then
+if ssh "$USER_SSH" "[ -f $REMOTE_MODULE/chroot-lib/pw-jack-physical ]" 2>/dev/null; then
     ssh "$ROOT_SSH" "mkdir -p $REMOTE_CHROOT/usr/local/bin"
-    scp "$PW_JACK_PHYSICAL" "$ROOT_SSH:$REMOTE_CHROOT/usr/local/bin/pw-jack-physical"
+    ssh "$ROOT_SSH" "cp $REMOTE_MODULE/chroot-lib/pw-jack-physical $REMOTE_CHROOT/usr/local/bin/pw-jack-physical"
     ssh "$ROOT_SSH" "chmod +x $REMOTE_CHROOT/usr/local/bin/pw-jack-physical"
 fi
 
-MIDI_BRIDGE="$REPO_ROOT/build/midi-bridge"
-if [ -f "$MIDI_BRIDGE" ]; then
+if ssh "$USER_SSH" "[ -f $REMOTE_MODULE/bin/midi-bridge ]" 2>/dev/null; then
     echo ""
     echo "--- Installing midi-bridge to chroot ---"
     ssh "$ROOT_SSH" "mkdir -p $REMOTE_CHROOT/usr/local/bin"
-    scp "$MIDI_BRIDGE" "$ROOT_SSH:$REMOTE_CHROOT/usr/local/bin/midi-bridge"
+    ssh "$ROOT_SSH" "cp $REMOTE_MODULE/bin/midi-bridge $REMOTE_CHROOT/usr/local/bin/midi-bridge"
     ssh "$ROOT_SSH" "chmod +x $REMOTE_CHROOT/usr/local/bin/midi-bridge"
     echo "midi-bridge installed at $REMOTE_CHROOT/usr/local/bin/midi-bridge"
 fi
 
-if [ ! -f "$PW_HELPER" ]; then
+if ! ssh "$USER_SSH" "[ -f $REMOTE_MODULE/bin/pw-helper ]" 2>/dev/null; then
     echo ""
     echo "NOTE: pw-helper not found. PipeWire must be started manually as root."
     echo "  ssh $ROOT_SSH"
@@ -116,9 +113,8 @@ fi
 REMOTE_SCRIPTS="/data/UserData"
 echo ""
 echo "--- Installing convenience scripts ---"
-scp "$REPO_ROOT/src/mount-chroot.sh" "$REPO_ROOT/src/start-vnc.sh" \
-    "$USER_SSH:$REMOTE_SCRIPTS/"
-ssh "$USER_SSH" "chmod +x $REMOTE_SCRIPTS/mount-chroot.sh $REMOTE_SCRIPTS/start-vnc.sh"
+ssh "$USER_SSH" "cp $REMOTE_MODULE/mount-chroot.sh $REMOTE_MODULE/start-vnc.sh $REMOTE_SCRIPTS/ 2>/dev/null || true"
+ssh "$USER_SSH" "chmod +x $REMOTE_SCRIPTS/mount-chroot.sh $REMOTE_SCRIPTS/start-vnc.sh 2>/dev/null || true"
 echo "Scripts installed to $REMOTE_SCRIPTS/"
 
 # ── Install chroot profile (root-owned path) ──
